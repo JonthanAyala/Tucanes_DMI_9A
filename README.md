@@ -6,13 +6,53 @@ Desarrollar una **aplicación móvil profesional** en Flutter, aplicando MVVM, m
 
 ---
 
-## 🏗️ Arquitectura y Framework
+## 🏗️ Arquitectura y Estructura de Carpetas MVVM
 
-- **Framework:** Flutter (multiplataforma: iOS + Android)
-- **Patrón:** MVVM (Model-View-ViewModel)
-    - Separación clara entre Modelos, Vistas y ViewModels
-    - Código organizado y mantenible
-- **Material Design:** Uso de widgets nativos y diseño consistente
+La app utiliza el patrón **MVVM (Model-View-ViewModel)** para mantener el código organizado, escalable y fácil de mantener. Cada carpeta cumple una función específica dentro de la arquitectura:
+
+### 📂 Estructura Base
+
+```
+/lib
+  /models        # Modelos de datos y entidades (ej. Paquete, Usuario)
+  /services      # Lógica de negocio y acceso a APIs, Firebase, almacenamiento
+  /utils         # Funciones auxiliares, helpers, constantes, validaciones
+  /views         # Pantallas y widgets principales (UI)
+  /viewmodels    # Lógica de presentación, gestión de estado y conexión entre modelos y vistas
+  /widgets       # Componentes reutilizables (botones, cards, formularios, etc.)
+```
+
+### 🧩 Explicación de Carpetas
+
+- **models/**  
+  Define las clases que representan los datos principales de la app (por ejemplo, `Paquete`, `Usuario`). Incluye métodos para serialización/deserialización y validaciones básicas.
+
+- **services/**  
+  Contiene la lógica para interactuar con fuentes externas: APIs REST, Firebase, almacenamiento local, notificaciones, etc. Aquí se centralizan las operaciones de negocio y comunicación.
+
+- **utils/**  
+  Incluye utilidades generales como validadores, formateadores, constantes globales, manejo de fechas, helpers y funciones que pueden ser usadas en cualquier parte del proyecto.
+
+- **views/**  
+  Agrupa las pantallas principales de la app (ejemplo: Login, Registro, Lista de Paquetes, Mapa, Perfil). Cada vista se enfoca en la presentación y recibe datos desde su ViewModel.
+
+- **viewmodels/**  
+  Aquí vive la lógica de presentación y gestión de estado. Los ViewModels conectan los modelos y servicios con las vistas, procesando datos y notificando cambios a la UI.
+
+- **widgets/**  
+  Componentes visuales reutilizables como botones personalizados, cards, formularios, listas, iconos, etc. Permiten construir la UI de forma modular y consistente.
+
+---
+
+**Ejemplo de flujo MVVM:**
+
+1. **View** solicita datos al **ViewModel**.
+2. **ViewModel** usa un **Service** para obtener o modificar datos en el **Model**.
+3. **ViewModel** procesa la información y actualiza el estado.
+4. **View** se actualiza automáticamente al recibir cambios del **ViewModel**.
+5. **Widgets** se usan dentro de las **Views** para construir la interfaz de usuario.
+
+Esta estructura facilita el mantenimiento, las pruebas y la escalabilidad del proyecto, asegurando una clara separación de responsabilidades.
 
 ---
 
@@ -225,6 +265,7 @@ Aplicación móvil diseñada para empresas de mensajería o logística, donde re
   /viewmodels
   /services
   /utils
+  /widgets
 /docs
 /test
 README.md
