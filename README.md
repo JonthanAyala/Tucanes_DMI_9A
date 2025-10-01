@@ -240,12 +240,26 @@ README.md
 
 ---
 
-## ✅ Definition of Done (DoD)
+### ✅ Definition of Done (DoD)
 
-- Código revisado y aprobado
-- Pruebas básicas superadas
-- Documentación actualizada
-- Issue movida a Done en el tablero
+Una historia o tarea se considera terminada cuando:
+
+- El código está revisado y mergeado.
+- Se han pasado las pruebas funcionales básicas.
+- La documentación relevante se encuentra actualizada.
+- La funcionalidad es visible en la app.
+- La issue está cerrada y movida a Done en el tablero.
+
+---
+
+### 📌 Lista de riesgos y mitigaciones
+
+| Riesgo                                 | Mitigación                                    |
+|----------------------------------------|-----------------------------------------------|
+| Retraso en desarrollo de APIs Backend  | Mockear APIs y avanzar en frontend local      |
+| Falta de experiencia con MVVM          | Capacitación previa y uso de ejemplos         |
+| Integración Firebase falla             | Seguir documentación oficial y soporte        |
+| Falta de tiempo en el sprint           | Priorización de tareas P0, reuniones diarias  |
 
 ---
 
