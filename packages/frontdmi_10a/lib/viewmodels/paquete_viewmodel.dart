@@ -137,13 +137,21 @@ class PaqueteViewModel extends ChangeNotifier {
   }
 
   // Actualizar estado
-  Future<bool> actualizarEstado(String id, String nuevoEstado) async {
+  Future<bool> actualizarEstado(
+    String id,
+    String nuevoEstado, {
+    Map<String, dynamic>? ubicacion,
+  }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _paqueteService.actualizarEstado(id, nuevoEstado);
+      await _paqueteService.actualizarEstado(
+        id,
+        nuevoEstado,
+        ubicacion: ubicacion,
+      );
       _isLoading = false;
       notifyListeners();
       return true;

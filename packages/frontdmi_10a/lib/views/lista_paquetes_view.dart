@@ -94,6 +94,8 @@ class _ListaPaquetesViewState extends State<ListaPaquetesView> {
   }
 
   Widget _buildListaPaquetes(PaqueteViewModel viewModel) {
+    final authViewModel = context.read<AuthViewModel>();
+    final usuario = authViewModel.usuario;
     var paquetes = viewModel.paquetes;
 
     if (_filtroEstado != 'todos') {
@@ -143,6 +145,13 @@ class _ListaPaquetesViewState extends State<ListaPaquetesView> {
               ),
             );
           },
+          // Parámetros para repartidores
+          mostrarBotonEstado: usuario?.rol == AppConstants.rolRepartidor,
+          repartidorActualId: usuario?.id,
+          onEstadoChange: usuario?.rol == AppConstants.rolRepartidor
+              ? (nuevoEstado) =>
+                    _cambiarEstadoPaquete(paquete.id, nuevoEstado, usuario!.id)
+              : null,
         );
       },
     );
@@ -172,6 +181,7 @@ class _ListaPaquetesViewState extends State<ListaPaquetesView> {
               const SizedBox(height: 16),
               _buildFiltroOption('todos', 'Todos'),
               _buildFiltroOption(AppConstants.estadoPendiente, 'Pendientes'),
+              _buildFiltroOption(AppConstants.estadoAsignado, 'Asignados'),
               _buildFiltroOption(AppConstants.estadoEnTransito, 'En Tránsito'),
               _buildFiltroOption(AppConstants.estadoEntregado, 'Entregados'),
             ],
@@ -201,5 +211,57 @@ class _ListaPaquetesViewState extends State<ListaPaquetesView> {
         Navigator.pop(context);
       },
     );
+  }
+
+  // Método para cambiar estado del paquete (repartidores)
+  Future<void> _cambiarEstadoPaquete(
+    String paqueteId,
+    String nuevoEstado,
+    String repartidorId,
+  ) async {
+    final paqueteViewModel = context.read<PaqueteViewModel>();
+
+    bool success = false;
+    String? mensajeExito;
+
+    // Si es asignado, necesita asignar repartidor
+    if (nuevoEstado == AppConstants.estadoAsignado) {
+      success = await paqueteViewModel.actualizarEstado(paqueteId, nuevoEstado);
+      mensajeExito = '✅ Paquete agregado a tu ruta';
+    }
+    // Si es devolver a pendiente, quitar repartidor
+    else if (nuevoEstado == AppConstants.estadoPendiente) {
+      success = await paqueteViewModel.actualizarEstado(paqueteId, nuevoEstado);
+      mensajeExito = 'Paquete devuelto a disponibles';
+    }
+    // Para en_transito
+    else if (nuevoEstado == AppConstants.estadoEnTransito) {
+      success = await paqueteViewModel.actualizarEstado(paqueteId, nuevoEstado);
+      mensajeExito = '📦 Paquete marcado como recogido';
+    } else {
+      // Para otros cambios de estado
+      success = await paqueteViewModel.actualizarEstado(paqueteId, nuevoEstado);
+      mensajeExito = 'Estado actualizado';
+    }
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensajeExito ?? 'Estado actualizado'),
+          backgroundColor: AppTheme.successColor,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else if (paqueteViewModel.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(paqueteViewModel.errorMessage!),
+          backgroundColor: AppTheme.errorColor,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 }

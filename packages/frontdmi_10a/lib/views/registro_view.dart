@@ -24,6 +24,10 @@ class _RegistroViewState extends State<RegistroView> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Variables para controlar visibilidad de contraseñas
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   @override
   void dispose() {
     _nombreController.dispose();
@@ -49,25 +53,29 @@ class _RegistroViewState extends State<RegistroView> {
     if (!mounted) return;
 
     if (success) {
-      // Cerrar sesión automática que se creó al registrar
-      await authViewModel.logout();
-
-      if (!mounted) return;
-
-      // Navegar a login
-      Navigator.of(context).pushReplacementNamed(AppConstants.loginRoute);
-
-      // Mostrar mensaje de éxito
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '✅ Cuenta creada exitosamente\n'
-            'Ya puedes iniciar sesión con tu cuenta',
-          ),
-          backgroundColor: AppTheme.successColor,
-          duration: Duration(seconds: 4),
-        ),
+      // Navegar directamente al login
+      // No hacemos logout porque puede causar problemas
+      // El usuario se registró exitosamente y debe iniciar sesión
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppConstants.loginRoute,
+        (route) => false, // Eliminar todas las rutas anteriores
       );
+
+      // Mostrar mensaje de éxito después de navegar
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '✅ Cuenta creada exitosamente\n'
+                'Inicia sesión con tu correo y contraseña',
+              ),
+              backgroundColor: AppTheme.successColor,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -84,7 +92,7 @@ class _RegistroViewState extends State<RegistroView> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('Registro de Repartidor'),
+        title: const Text('Crear Cuenta'),
         backgroundColor: AppTheme.primaryColor,
       ),
       body: SafeArea(
@@ -97,13 +105,13 @@ class _RegistroViewState extends State<RegistroView> {
               children: [
                 const SizedBox(height: 20),
                 const Icon(
-                  Icons.delivery_dining,
+                  Icons.person_add,
                   size: 80,
                   color: AppTheme.primaryColor,
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Crear Cuenta de Repartidor',
+                  'Crear Cuenta de Cliente',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -145,10 +153,24 @@ class _RegistroViewState extends State<RegistroView> {
                 CustomTextField(
                   controller: _passwordController,
                   label: 'Contraseña',
-                  hint: 'Mínimo 6 caracteres',
+                  hint:
+                      'Mínimo 8 caracteres (1 mayúscula, 1 minúscula, 1 número)',
                   prefixIcon: Icons.lock,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   validator: Validators.validatePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: AppTheme.textSecondary,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -158,7 +180,7 @@ class _RegistroViewState extends State<RegistroView> {
                   label: 'Confirmar Contraseña',
                   hint: 'Repite tu contraseña',
                   prefixIcon: Icons.lock_outline,
-                  obscureText: true,
+                  obscureText: _obscureConfirmPassword,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Por favor confirma tu contraseña';
@@ -168,6 +190,19 @@ class _RegistroViewState extends State<RegistroView> {
                     }
                     return null;
                   },
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: AppTheme.textSecondary,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 24),
 
@@ -191,7 +226,7 @@ class _RegistroViewState extends State<RegistroView> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Te registrarás como Repartidor. Para crear clientes, contacta al administrador.',
+                          'Te registrarás como Cliente. Los repartidores son creados por el administrador.',
                           style: TextStyle(
                             fontSize: 13,
                             color: AppTheme.textPrimary,

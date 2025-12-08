@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../utils/constants.dart';
 
 /// Servicio para comunicación con backend de notificaciones
 /// @author JonthanAyala
@@ -6,8 +7,9 @@ class NotificacionBackendService {
   final Dio _dio;
 
   // URL del backend - CAMBIAR según tu configuración
+  // URL del backend - CAMBIAR según tu configuración
   static const String _baseUrl =
-      'http://paqueteria.us-east-1.elasticbeanstalk.com/api/notificaciones';
+      '${AppConstants.backendUrl}/api/notificaciones';
   //static const String _baseUrl = 'http://localhost:8080/api/notificaciones';
 
   NotificacionBackendService()
@@ -65,7 +67,33 @@ class NotificacionBackendService {
     }
   }
 
-  /// CASO 3: Notificar que un paquete fue entregado
+  /// CASO 3: Notificar que un paquete fue asignado a un repartidor
+  Future<bool> notificarPaqueteAsignado({
+    required String paqueteId,
+    required String clienteId,
+    required String repartidorId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/paquete-asignado',
+        data: {
+          'paqueteId': paqueteId,
+          'clienteId': clienteId,
+          'repartidorId': repartidorId,
+        },
+      );
+
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      print('Error al notificar paquete asignado: ${e.message}');
+      return false;
+    } catch (e) {
+      print('Error inesperado al notificar paquete asignado: $e');
+      return false;
+    }
+  }
+
+  /// CASO 4: Notificar que un paquete fue entregado
   Future<bool> notificarPaqueteEntregado({
     required String paqueteId,
     required String clienteId,

@@ -20,8 +20,23 @@ class Validators {
       return 'La contraseña es requerida';
     }
 
-    if (value.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
+    if (value.length < 8) {
+      return 'La contraseña debe tener al menos 8 caracteres';
+    }
+
+    // Verificar mayúscula
+    if (!value.contains(RegExp(r'[A-Z]'))) {
+      return 'La contraseña debe incluir al menos una mayúscula';
+    }
+
+    // Verificar minúscula
+    if (!value.contains(RegExp(r'[a-z]'))) {
+      return 'La contraseña debe incluir al menos una minúscula';
+    }
+
+    // Verificar número
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'La contraseña debe incluir al menos un número';
     }
 
     return null;

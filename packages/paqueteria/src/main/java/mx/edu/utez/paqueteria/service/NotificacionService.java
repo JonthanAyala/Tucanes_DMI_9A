@@ -18,7 +18,8 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * Servicio de notificaciones de paquetería
- * Maneja 3 casos: Pedido tomado, Nuevo pedido, Pedido entregado
+ * Maneja 4 casos: Nuevo pedido, Pedido asignado, Pedido tomado, Pedido
+ * entregado
  * Recupera información faltante directamente de Firestore.
  * 
  * @author JonthanAyala
@@ -108,7 +109,8 @@ public class NotificacionService {
                 PaqueteModel paquete = obtenerPaquete(evento.getPaqueteId());
                 if (paquete != null) {
                     evento.setDestinatario(paquete.getDestinatario());
-                    evento.setDireccion(paquete.getDireccion());
+                    // Usar dirección formateada desde el mapa destino
+                    evento.setDireccion(paquete.getDireccionFormateada());
                 } else {
                     throw new RecursoNoEncontradoException("Paquete no encontrado con ID: " + evento.getPaqueteId());
                 }
@@ -155,7 +157,73 @@ public class NotificacionService {
     }
 
     /**
-     * CASO 3: Notificar al cliente que su paquete fue entregado
+     * CASO 3: Notificar al cliente que su paquete fue asignado a un repartidor
+     */
+    public void notificarPedidoAsignado(PaqueteEventDTO evento) {
+        try {
+            // 1. Completar datos faltantes (Nombre del repartidor)
+            if (evento.getRepartidorNombre() == null || evento.getRepartidorNombre().isEmpty()) {
+                UsuarioModel repartidor = obtenerUsuario(evento.getRepartidorId());
+                if (repartidor != null) {
+                    evento.setRepartidorNombre(repartidor.getNombre());
+                } else {
+                    throw new RecursoNoEncontradoException(
+                            "Repartidor no encontrado con ID: " + evento.getRepartidorId());
+                }
+            }
+
+            // 2. Obtener clienteId si falta
+            if (evento.getClienteId() == null || evento.getClienteId().isEmpty()) {
+                PaqueteModel paquete = obtenerPaquete(evento.getPaqueteId());
+                if (paquete != null) {
+                    evento.setClienteId(paquete.getClienteId());
+                } else {
+                    throw new RecursoNoEncontradoException("Paquete no encontrado con ID: " + evento.getPaqueteId());
+                }
+            }
+
+            System.out.println("Notificando pedido asignado - Paquete: " + evento.getPaqueteId() + ", Repartidor: "
+                    + evento.getRepartidorNombre());
+
+            // 3. Obtener cliente para su token
+            UsuarioModel cliente = obtenerUsuario(evento.getClienteId());
+
+            if (cliente == null) {
+                throw new RecursoNoEncontradoException("Cliente no encontrado con ID: " + evento.getClienteId());
+            }
+
+            Map<String, String> data = new HashMap<>();
+            data.put("tipo", "asignado");
+            data.put("paqueteId", evento.getPaqueteId());
+            data.put("repartidorId", evento.getRepartidorId());
+            data.put("userId", evento.getClienteId());
+
+            String titulo = "👤 Repartidor asignado";
+            String mensaje = String.format("%s fue asignado a tu paquete", evento.getRepartidorNombre());
+
+            // Guardar en Firestore (Historial)
+            guardarNotificacionEnFirestore(evento.getClienteId(), titulo, mensaje, "asignado", data);
+
+            // Enviar Push si tiene token
+            if (cliente.getFcmToken() != null && !cliente.getFcmToken().isEmpty()) {
+                fcmService.enviarNotificacion(cliente.getFcmToken(), titulo, mensaje, data);
+                System.out.println("Notificación enviada al cliente: " + evento.getClienteId());
+            } else {
+                System.out.println(
+                        "Cliente " + evento.getClienteId() + " no tiene token FCM, solo se guardó en historial");
+            }
+
+        } catch (RecursoNoEncontradoException e) {
+            throw e; // Re-lanzar para que el controlador la capture
+        } catch (Exception e) {
+            System.out.println("Error al notificar pedido asignado: " + e.getMessage());
+            e.printStackTrace();
+            throw new NotificacionException("Error interno al procesar notificación de pedido asignado", e);
+        }
+    }
+
+    /**
+     * CASO 4: Notificar al cliente que su paquete fue entregado
      */
     public void notificarPedidoEntregado(PaqueteEventDTO evento) {
         try {
@@ -217,6 +285,7 @@ public class NotificacionService {
 
             Map<String, Object> notificacion = new HashMap<>();
             notificacion.put("id", notificacionId);
+            notificacion.put("userId", userId);
             notificacion.put("titulo", titulo);
             notificacion.put("mensaje", mensaje);
             notificacion.put("fecha", new java.util.Date());

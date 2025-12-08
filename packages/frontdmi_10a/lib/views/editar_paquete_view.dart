@@ -36,7 +36,8 @@ class _EditarPaqueteViewState extends State<EditarPaqueteView> {
       text: widget.paquete.destinatario,
     );
     _direccionController = TextEditingController(
-      text: widget.paquete.direccion,
+      text:
+          '${widget.paquete.destino['calle']} ${widget.paquete.destino['numero']}, ${widget.paquete.destino['colonia']}',
     );
     _pesoController = TextEditingController(
       text: widget.paquete.peso.toString(),
@@ -82,10 +83,14 @@ class _EditarPaqueteViewState extends State<EditarPaqueteView> {
     if (_formKey.currentState!.validate()) {
       final paqueteViewModel = context.read<PaqueteViewModel>();
 
+      final nuevoDestino = Map<String, dynamic>.from(widget.paquete.destino);
+      // Por ahora solo permitimos editar la calle principal desde este campo simple
+      // Idealmente deberíamos tener todos los campos detallados aquí también
+      nuevoDestino['calle'] = _direccionController.text.trim();
+
       final paqueteActualizado = widget.paquete.copyWith(
         destinatario: _destinatarioController.text.trim(),
-        direccion: _direccionController.text.trim(),
-        peso: double.parse(_pesoController.text),
+        destino: nuevoDestino,
         estado: _estadoSeleccionado,
       );
 

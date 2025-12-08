@@ -64,6 +64,24 @@ public class NotificacionController {
         }
     }
 
+    @PostMapping("/paquete-asignado")
+    public ResponseEntity<?> notificarPaqueteAsignado(@RequestBody PaqueteEventDTO evento) {
+        try {
+            System.out.println("Recibida solicitud de notificación: Paquete Asignado - ID: " + evento.getPaqueteId());
+            notificacionService.notificarPedidoAsignado(evento);
+            return ResponseEntity
+                    .ok(crearRespuesta(true, "Notificación de paquete asignado enviada", evento.getPaqueteId()));
+        } catch (RecursoNoEncontradoException e) {
+            System.out.println("Recurso no encontrado al notificar paquete asignado: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(crearRespuesta(false, e.getMessage(), null));
+        } catch (Exception e) {
+            System.err.println("Error interno al notificar paquete asignado: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(crearRespuesta(false, "Error interno: " + e.getMessage(), null));
+        }
+    }
+
     @PostMapping("/paquete-entregado")
     public ResponseEntity<?> notificarPaqueteEntregado(@RequestBody PaqueteEventDTO evento) {
         try {

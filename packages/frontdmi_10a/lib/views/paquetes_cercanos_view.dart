@@ -418,7 +418,7 @@ class _PaquetesCercanosViewState extends State<PaquetesCercanosView> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      item.paquete.direccion,
+                      '${item.paquete.destino['calle']} ${item.paquete.destino['numero']}, ${item.paquete.destino['colonia']}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: AppTheme.textSecondary,

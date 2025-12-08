@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../models/estadistica_model.dart';
 import 'auth_service.dart';
 
 // Servicio de API REST con Dio - JonthanAyala
@@ -152,25 +151,6 @@ class ApiService {
     );
   }
 
-  // Endpoint de ejemplo: Obtener estadísticas de paquetes
-  Future<EstadisticaPaquetes> obtenerEstadisticas() async {
-    try {
-      // En producción, esto sería un endpoint real de Firebase Cloud Functions
-      // Por ahora usamos JSONPlaceholder como demostración
-      await _dio.get('/users/1');
-
-      // Simular estadísticas basadas en datos de ejemplo
-      return EstadisticaPaquetes(
-        totalPaquetes: 42,
-        pendientes: 12,
-        enTransito: 18,
-        entregados: 12,
-        porcentajeEntregados: 28.6,
-      );
-    } on DioException catch (e) {
-      throw _handleError(e);
-    }
-  }
 
   // Endpoint de ejemplo: Obtener perfil de usuario
   Future<Map<String, dynamic>> obtenerPerfilUsuario(String userId) async {

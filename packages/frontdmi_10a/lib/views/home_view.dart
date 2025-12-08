@@ -5,9 +5,9 @@ import '../utils/constants.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/notificacion_viewmodel.dart'; // JonthanAyala - Bandeja
 import 'lista_paquetes_view.dart';
-import 'mapa_view.dart';
+// import 'mapa_view.dart'; // Eliminado
 import 'gestion_usuarios_view.dart';
-import 'estadisticas_view.dart'; // JonthanAyala - Dio
+// import 'estadisticas_view.dart'; // Eliminado
 import 'paquetes_cercanos_view.dart'; // JonthanAyala - Paquetes Cercanos
 import 'bandeja_notificaciones_view.dart'; // JonthanAyala - Bandeja
 import 'perfil_view.dart';
@@ -33,8 +33,8 @@ class _HomeViewState extends State<HomeView> {
     // Páginas según el rol
     final List<Widget> pages = [
       const ListaPaquetesView(),
-      const MapaView(),
-      if (isAdmin) const EstadisticasView(), // JonthanAyala - Dio
+      // const MapaView(), // Eliminado
+      // if (isAdmin) const EstadisticasView(), // Eliminado
       if (isAdmin) const GestionUsuariosView(),
       const PerfilView(),
     ];
@@ -46,17 +46,21 @@ class _HomeViewState extends State<HomeView> {
         activeIcon: Icon(Icons.inventory_2),
         label: 'Paquetes',
       ),
+      /* Eliminado Mapa
       const BottomNavigationBarItem(
         icon: Icon(Icons.map_outlined),
         activeIcon: Icon(Icons.map),
         label: 'Mapa',
       ),
+      */
+      /* Eliminado Estadísticas
       if (isAdmin)
         const BottomNavigationBarItem(
           icon: Icon(Icons.analytics_outlined),
           activeIcon: Icon(Icons.analytics),
           label: 'Estadísticas',
         ),
+      */
       if (isAdmin)
         const BottomNavigationBarItem(
           icon: Icon(Icons.people_outlined),
@@ -160,13 +164,13 @@ class _HomeViewState extends State<HomeView> {
   // Obtener título según la página actual
   String _getTitulo(int index, bool isAdmin) {
     if (index == 0) return 'Paquetes';
-    if (index == 1) return 'Mapa';
+    // if (index == 1) return 'Mapa'; // Eliminado
     if (isAdmin) {
-      if (index == 2) return 'Estadísticas';
-      if (index == 3) return 'Usuarios';
-      if (index == 4) return 'Perfil';
+      // if (index == 1) return 'Estadísticas'; // Eliminado
+      if (index == 1) return 'Usuarios'; // Ajustado índice
+      if (index == 2) return 'Perfil'; // Ajustado índice
     } else {
-      if (index == 2) return 'Perfil';
+      if (index == 1) return 'Perfil'; // Ajustado índice
     }
     return 'Home';
   }

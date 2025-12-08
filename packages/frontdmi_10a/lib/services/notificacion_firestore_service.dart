@@ -28,13 +28,12 @@ class NotificacionFirestoreService {
   Stream<List<Notificacion>> obtenerNotificacionesUsuario(String userId) {
     print('Escuchando notificaciones para usuario: $userId');
     return _getNotificacionesRef(userId)
-        // .orderBy('fecha', descending: true) // COMENTADO TEMPORALMENTE: Posible falta de índice
         .snapshots()
         .map((snapshot) {
           print(
             'Recibidos ${snapshot.docs.length} documentos de notificaciones',
           );
-          return snapshot.docs.map((doc) {
+          final notificaciones = snapshot.docs.map((doc) {
             try {
               final data = doc.data() as Map<String, dynamic>;
               data['userId'] = userId;
@@ -52,10 +51,16 @@ class NotificacionFirestoreService {
               );
             }
           }).toList();
+
+          // Ordenar por fecha en memoria (más reciente primero)
+          notificaciones.sort(
+            (a, b) => b.fechaCreacion.compareTo(a.fechaCreacion),
+          );
+
+          return notificaciones;
         })
         .handleError((error) {
           print('ERROR EN STREAM DE NOTIFICACIONES: $error');
-          // Si es error de índice, Firebase suele mandar un link en la consola
           return <Notificacion>[];
         });
   }

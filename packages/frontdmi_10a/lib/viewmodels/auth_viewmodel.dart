@@ -3,12 +3,14 @@ import '../models/usuario_model.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../services/location_service.dart';
 
 // ViewModel de autenticación - JaimeCAST69
 class AuthViewModel extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final StorageService _storageService = StorageService();
   final NotificationService _notificationService = NotificationService();
+  final LocationService _locationService = LocationService();
 
   Usuario? _usuario;
   bool _isLoading = false;
@@ -31,6 +33,8 @@ class AuthViewModel extends ChangeNotifier {
         // Inicializar notificaciones si hay sesión activa
         if (_usuario != null) {
           await _notificationService.inicializar(userId: _usuario!.id);
+          // Solicitar permiso de ubicación al iniciar
+          await _locationService.checkPermissions();
         }
       }
     } catch (e) {
@@ -54,6 +58,8 @@ class AuthViewModel extends ChangeNotifier {
         await _storageService.guardarSesion(_usuario!);
         // Inicializar notificaciones después del login
         await _notificationService.inicializar(userId: _usuario!.id);
+        // Solicitar permiso de ubicación al login
+        await _locationService.checkPermissions();
         _isLoading = false;
         notifyListeners();
         return true;
@@ -83,17 +89,16 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _usuario = await _authService.registro(
+      final usuario = await _authService.registro(
         nombre: nombre,
         email: email,
         password: password,
         rol: rol,
       );
 
-      if (_usuario != null) {
-        await _storageService.guardarSesion(_usuario!);
-        // Inicializar notificaciones después del registro
-        await _notificationService.inicializar(userId: _usuario!.id);
+      if (usuario != null) {
+        // NO guardar sesión automáticamente
+        // El usuario debe iniciar sesión manualmente después del registro
         _isLoading = false;
         notifyListeners();
         return true;

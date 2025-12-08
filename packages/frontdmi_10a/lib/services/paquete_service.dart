@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dio/dio.dart';
 // import 'package:firebase_storage/firebase_storage.dart'; // COMENTADO: Para usar en el futuro con Firebase Storage
 import '../models/paquete_model.dart';
+import '../utils/constants.dart';
 import 'local_storage_service.dart'; // Servicio de almacenamiento local
 import 'notificacion_backend_service.dart'; // JonthanAyala - Backend de notificaciones
 
@@ -84,11 +86,11 @@ class PaqueteService {
       String? fotoRuta;
 
       if (foto != null) {
-        // ALMACENAMIENTO LOCAL (actual)
-        fotoRuta = await _guardarFotoLocal(foto, paquete.id);
+        // ALMACENAMIENTO AWS S3 (Backend)
+        fotoRuta = await _subirFotoBackend(foto);
 
-        // FIREBASE STORAGE (comentado para futuro uso)
-        // fotoRuta = await _guardarFotoFirebase(foto, paquete.id);
+        // ALMACENAMIENTO LOCAL (Legacy/Backup)
+        // fotoRuta = await _guardarFotoLocal(foto, paquete.id);
       }
 
       // Generar código QR único - JonthanAyala
@@ -128,11 +130,11 @@ class PaqueteService {
       String? fotoRuta = paquete.fotoUrl;
 
       if (nuevaFoto != null) {
-        // ALMACENAMIENTO LOCAL (actual)
-        fotoRuta = await _guardarFotoLocal(nuevaFoto, paquete.id);
+        // ALMACENAMIENTO AWS S3 (Backend)
+        fotoRuta = await _subirFotoBackend(nuevaFoto);
 
-        // FIREBASE STORAGE (comentado para futuro uso)
-        // fotoRuta = await _guardarFotoFirebase(nuevaFoto, paquete.id);
+        // ALMACENAMIENTO LOCAL (Legacy)
+        // fotoRuta = await _guardarFotoLocal(nuevaFoto, paquete.id);
       }
 
       final paqueteActualizado = paquete.copyWith(fotoUrl: fotoRuta);
@@ -166,13 +168,21 @@ class PaqueteService {
     }
   }
 
-  // Actualizar estado del paquete
-  Future<void> actualizarEstado(String id, String nuevoEstado) async {
+  // Actualizar estado del paquete con ubicación opcional
+  Future<void> actualizarEstado(
+    String id,
+    String nuevoEstado, {
+    Map<String, dynamic>? ubicacion,
+  }) async {
     try {
+      final Map<String, dynamic> updateData = {'estado': nuevoEstado};
+
+      if (nuevoEstado == 'entregado' && ubicacion != null) {
+        updateData['ubicacionEntrega'] = ubicacion;
+      }
+
       // 1. Actualizar Firestore
-      await _firestore.collection('paquetes').doc(id).update({
-        'estado': nuevoEstado,
-      });
+      await _firestore.collection('paquetes').doc(id).update(updateData);
 
       // 2. Si el estado es "entregado", notificar al cliente
       if (nuevoEstado == 'entregado') {
@@ -222,8 +232,12 @@ class PaqueteService {
     }
   }
 
-  // Tomar paquete (auto-asignarse)
-  Future<bool> tomarPaquete(String paqueteId, String repartidorId) async {
+  // Tomar paquete (auto-asignarse) con ubicación
+  Future<bool> tomarPaquete(
+    String paqueteId,
+    String repartidorId, {
+    Map<String, dynamic>? ubicacion,
+  }) async {
     try {
       // 1. Obtener datos del paquete y repartidor para la notificación
       final paqueteDoc = await _firestore
@@ -239,11 +253,17 @@ class PaqueteService {
 
       final paqueteData = paqueteDoc.data()!;
 
-      // 2. Actualizar Firestore
-      await _firestore.collection('paquetes').doc(paqueteId).update({
+      final Map<String, dynamic> updateData = {
         'repartidorId': repartidorId,
         'estado': 'en_transito',
-      });
+      };
+
+      if (ubicacion != null) {
+        updateData['ubicacionRecoleccion'] = ubicacion;
+      }
+
+      // 2. Actualizar Firestore
+      await _firestore.collection('paquetes').doc(paqueteId).update(updateData);
 
       // 3. Notificar al cliente (backend)
       // No esperar respuesta para no bloquear
@@ -280,31 +300,43 @@ class PaqueteService {
   }
 
   // ============================================
-  // MÉTODOS DE FIREBASE STORAGE (COMENTADOS)
-  // Para usar en el futuro cuando tengas plan de pago
+  // MÉTODOS DE ALMACENAMIENTO EN AWS S3 (BACKEND)
   // ============================================
 
-  /* 
-  // Guardar foto en Firebase Storage
-  Future<String> _guardarFotoFirebase(File foto, String paqueteId) async {
+  // Subir foto al backend (S3)
+  Future<String> _subirFotoBackend(File foto) async {
     try {
-      final ref = _storage.ref().child('paquetes/$paqueteId.jpg');
-      await ref.putFile(foto);
-      return await ref.getDownloadURL();
+      String fileName = foto.path.split('/').last;
+      FormData formData = FormData.fromMap({
+        "file": await MultipartFile.fromFile(foto.path, filename: fileName),
+      });
+
+      // URL del backend (Elastic Beanstalk)
+      // Usamos la misma base que NotificacionBackendService
+      String baseUrl = AppConstants.backendUrl;
+      String endpoint = '$baseUrl/api/storage/upload';
+
+      print('📸 Intentando subir foto a: $endpoint');
+
+      Dio dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      Response response = await dio.post(endpoint, data: formData);
+
+      if (response.statusCode == 200) {
+        return response.data['url'];
+      } else {
+        throw Exception('Error en backend: ${response.statusMessage}');
+      }
     } catch (e) {
-      throw Exception('Error al subir foto a Firebase: ${e.toString()}');
+      print('Error al subir foto al backend: $e');
+      // Fallback a local si falla el backend (opcional, o lanzar error)
+      // Por ahora lanzamos error para que el usuario sepa
+      throw Exception('Error al subir foto al servidor: ${e.toString()}');
     }
   }
-  
-  // Eliminar foto de Firebase Storage
-  Future<void> _eliminarFotoFirebase(String fotoUrl) async {
-    try {
-      final ref = _storage.refFromURL(fotoUrl);
-      await ref.delete();
-    } catch (e) {
-      // No lanzar error si la foto no existe
-      print('Error al eliminar foto de Firebase: ${e.toString()}');
-    }
-  }
-  */
 }

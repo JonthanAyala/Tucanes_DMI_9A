@@ -15,9 +15,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaqueteEventDTO {
+    // Se obtienen del request
     private String paqueteId; // 1
     private String clienteId; // 2
     private String repartidorId; // 3
+    // Se obtienen del paquete en firebase
     private String repartidorNombre; // auto
     private String destinatario; // auto
     private String direccion; // auto

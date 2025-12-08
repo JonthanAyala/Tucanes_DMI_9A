@@ -63,6 +63,10 @@ class AuthService {
             .doc(usuario.id)
             .set(usuario.toJson());
 
+        // Cerrar la sesión automática de Firebase Auth
+        // Para forzar al usuario a iniciar sesión manualmente
+        await _auth.signOut();
+
         return usuario;
       }
       return null;

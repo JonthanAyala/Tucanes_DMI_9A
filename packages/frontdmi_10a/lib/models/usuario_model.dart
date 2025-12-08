@@ -6,6 +6,7 @@ class Usuario {
   final String rol; // cliente, repartidor, admin
   final String? token;
   final String? fcmToken; // Token de Firebase Cloud Messaging
+  // direccones del usuario
 
   Usuario({
     required this.id,

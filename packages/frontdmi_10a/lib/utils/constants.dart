@@ -18,6 +18,7 @@ class AppConstants {
 
   // Estados de paquete
   static const String estadoPendiente = 'pendiente';
+  static const String estadoAsignado = 'asignado';
   static const String estadoEnTransito = 'en_transito';
   static const String estadoEntregado = 'entregado';
 
@@ -41,4 +42,8 @@ class AppConstants {
   static const String msgEmailInvalido = 'Email inválido';
   static const String msgPasswordCorta =
       'La contraseña debe tener al menos 6 caracteres';
+
+  // Configuración del Backend
+  static const String backendUrl =
+      'http://paqueteria.us-east-1.elasticbeanstalk.com';
 }

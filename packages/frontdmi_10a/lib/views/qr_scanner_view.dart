@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../viewmodels/paquete_viewmodel.dart';
 import '../utils/app_theme.dart';
 
@@ -44,11 +45,28 @@ class _QRScannerViewState extends State<QRScannerView> {
 
     // Validar código QR
     if (code == widget.codigoQREsperado) {
+      // Obtener ubicación actual
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition();
+      } catch (e) {
+        print('Error al obtener ubicación: $e');
+      }
+
+      final Map<String, dynamic>? ubicacion = position != null
+          ? {
+              'lat': position.latitude,
+              'lng': position.longitude,
+              'timestamp': DateTime.now().toIso8601String(),
+            }
+          : null;
+
       // Código correcto, actualizar estado a entregado
       final paqueteViewModel = context.read<PaqueteViewModel>();
       final success = await paqueteViewModel.actualizarEstado(
         widget.paqueteId,
         'entregado',
+        ubicacion: ubicacion,
       );
 
       if (success && mounted) {

@@ -23,6 +23,8 @@ class DetallePaqueteView extends StatelessWidget {
     switch (paquete.estado) {
       case 'pendiente':
         return AppTheme.warningColor;
+      case 'asignado':
+        return Colors.blue;
       case 'en_transito':
         return AppTheme.secondaryColor;
       case 'entregado':
@@ -36,6 +38,8 @@ class DetallePaqueteView extends StatelessWidget {
     switch (paquete.estado) {
       case 'pendiente':
         return 'Pendiente';
+      case 'asignado':
+        return 'Asignado';
       case 'en_transito':
         return 'En Tránsito';
       case 'entregado':
@@ -140,7 +144,32 @@ class DetallePaqueteView extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Información del paquete
+                  // Información del remitente (Origen)
+                  _buildInfoCard('Información del Remitente', [
+                    _buildInfoRow(
+                      Icons.home,
+                      'Dirección de Recolección',
+                      '${paquete.origen['calle']} ${paquete.origen['numero']}, ${paquete.origen['colonia']}, ${paquete.origen['municipio']}',
+                      onTap: () => _abrirGoogleMaps(
+                        context,
+                        '${paquete.origen['calle']} ${paquete.origen['numero']}, ${paquete.origen['colonia']}, ${paquete.origen['municipio']}',
+                      ),
+                    ),
+                    if (paquete.origen['telefono'] != null &&
+                        paquete.origen['telefono'].toString().isNotEmpty)
+                      _buildInfoRow(
+                        Icons.phone,
+                        'Teléfono de Contacto',
+                        paquete.origen['telefono'].toString(),
+                        onTap: () => _llamarTelefono(
+                          context,
+                          paquete.origen['telefono'].toString(),
+                        ),
+                      ),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Información del destinatario
                   _buildInfoCard('Información del Destinatario', [
                     _buildInfoRow(
                       Icons.person,
@@ -149,10 +178,24 @@ class DetallePaqueteView extends StatelessWidget {
                     ),
                     _buildInfoRow(
                       Icons.location_on,
-                      'Dirección',
-                      paquete.direccion,
-                      onTap: () => _abrirGoogleMaps(context, paquete.direccion),
+                      'Dirección de Entrega',
+                      '${paquete.destino['calle']} ${paquete.destino['numero']}, ${paquete.destino['colonia']}, ${paquete.destino['municipio']}',
+                      onTap: () => _abrirGoogleMaps(
+                        context,
+                        '${paquete.destino['calle']} ${paquete.destino['numero']}, ${paquete.destino['colonia']}, ${paquete.destino['municipio']}',
+                      ),
                     ),
+                    if (paquete.destino['telefono'] != null &&
+                        paquete.destino['telefono'].toString().isNotEmpty)
+                      _buildInfoRow(
+                        Icons.phone,
+                        'Teléfono de Contacto',
+                        paquete.destino['telefono'].toString(),
+                        onTap: () => _llamarTelefono(
+                          context,
+                          paquete.destino['telefono'].toString(),
+                        ),
+                      ),
                   ]),
                   const SizedBox(height: 16),
 
@@ -463,5 +506,36 @@ class DetallePaqueteView extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Método para realizar llamadas telefónicas
+  Future<void> _llamarTelefono(BuildContext context, String telefono) async {
+    // Limpiar el número de teléfono
+    final numLimpio = telefono.replaceAll(RegExp(r'[^\d+]'), '');
+    final url = Uri.parse('tel:$numLimpio');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo realizar la llamada'),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al llamar: $e'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
   }
 }
