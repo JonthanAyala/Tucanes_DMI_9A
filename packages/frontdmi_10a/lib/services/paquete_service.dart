@@ -4,8 +4,10 @@ import 'package:dio/dio.dart';
 // import 'package:firebase_storage/firebase_storage.dart'; // COMENTADO: Para usar en el futuro con Firebase Storage
 import '../models/paquete_model.dart';
 import '../utils/constants.dart';
+import '../utils/error_handler.dart';
 import 'local_storage_service.dart'; // Servicio de almacenamiento local
 import 'notificacion_backend_service.dart'; // JonthanAyala - Backend de notificaciones
+import 'error_logging_service.dart';
 
 // Servicio de gestión de paquetes - BojitaNoir
 // NOTA: Actualmente usa almacenamiento LOCAL para fotos
@@ -17,6 +19,7 @@ class PaqueteService {
       LocalStorageService(); // Almacenamiento local
   final NotificacionBackendService _backendService =
       NotificacionBackendService(); // JonthanAyala - Backend
+  final ErrorLoggingService _errorLogger = ErrorLoggingService();
 
   // Obtener todos los paquetes
   Stream<List<Paquete>> obtenerPaquetes() {
@@ -76,7 +79,17 @@ class PaqueteService {
       }
       return null;
     } catch (e) {
-      throw Exception('Error al obtener paquete: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService.obtenerPaquetePorId',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Obtener paquete por ID: $id',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -120,7 +133,14 @@ class PaqueteService {
             return false;
           });
     } catch (e) {
-      throw Exception('Error al crear paquete: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService.crearPaquete',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(appError, context: 'Crear paquete');
+      }
+      throw appError;
     }
   }
 
@@ -144,7 +164,17 @@ class PaqueteService {
           .doc(paquete.id)
           .update(paqueteActualizado.toJson());
     } catch (e) {
-      throw Exception('Error al actualizar paquete: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService.actualizarPaquete',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Actualizar paquete ID: ${paquete.id}',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -164,7 +194,17 @@ class PaqueteService {
 
       await _firestore.collection('paquetes').doc(id).delete();
     } catch (e) {
-      throw Exception('Error al eliminar paquete: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService.eliminarPaquete',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Eliminar paquete ID: $id',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -207,7 +247,17 @@ class PaqueteService {
         }
       }
     } catch (e) {
-      throw Exception('Error al actualizar estado: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService.actualizarEstado',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Actualizar estado paquete ID: $id',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -228,7 +278,17 @@ class PaqueteService {
           .map((doc) => Paquete.fromJson({'id': doc.id, ...doc.data()}))
           .toList();
     } catch (e) {
-      throw Exception('Error al obtener paquetes disponibles: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService.obtenerPaquetesDisponibles',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Obtener paquetes disponibles',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -295,7 +355,17 @@ class PaqueteService {
     try {
       return await _localStorage.guardarFoto(foto, paqueteId);
     } catch (e) {
-      throw Exception('Error al guardar foto localmente: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService._guardarFotoLocal',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Guardar foto localmente',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -333,10 +403,19 @@ class PaqueteService {
         throw Exception('Error en backend: ${response.statusMessage}');
       }
     } catch (e) {
-      print('Error al subir foto al backend: $e');
-      // Fallback a local si falla el backend (opcional, o lanzar error)
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'PaqueteService._subirFotoBackend',
+      );
+      print('⚠️ Error al subir foto al backend: ${appError.userMessage}');
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Subir foto al servidor AWS S3',
+        );
+      }
       // Por ahora lanzamos error para que el usuario sepa
-      throw Exception('Error al subir foto al servidor: ${e.toString()}');
+      throw appError;
     }
   }
 }

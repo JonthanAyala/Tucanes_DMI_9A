@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/error_handler.dart';
+import 'error_logging_service.dart';
 
 // Servicio de notificaciones push - JaimeCAST69
 class NotificationService {
@@ -8,6 +10,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ErrorLoggingService _errorLogger = ErrorLoggingService();
 
   // Inicializar servicio de notificaciones
   Future<void> inicializar({String? userId}) async {
@@ -40,7 +43,19 @@ class NotificationService {
       // Escuchar mensajes cuando la app se abre desde notificación
       FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
     } catch (e) {
-      print('Error al inicializar notificaciones: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'NotificationService.inicializar',
+      );
+      print('⚠️ Error al inicializar notificaciones: ${appError.userMessage}');
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          userId: userId,
+          context: 'Inicialización de notificaciones',
+        );
+      }
+      // No lanzar error para no bloquear el inicio de la app
     }
   }
 
@@ -77,20 +92,39 @@ class NotificationService {
 
       final notificacionId = DateTime.now().millisecondsSinceEpoch.toString();
 
-      await _firestore.collection('notificaciones').doc(notificacionId).set({
-        'id': notificacionId,
-        'userId': userId,
-        'titulo': message.notification?.title ?? 'Notificación',
-        'mensaje': message.notification?.body ?? '',
-        'tipo': message.data['tipo'] ?? 'sistema',
-        'fechaCreacion': FieldValue.serverTimestamp(),
-        'leida': false,
-        'data': message.data,
-      });
+      // Guardar en la subcolección del usuario
+      await _firestore
+          .collection('usuarios')
+          .doc(userId)
+          .collection('notificaciones')
+          .doc(notificacionId)
+          .set({
+            'id': notificacionId,
+            'userId': userId,
+            'titulo': message.notification?.title ?? 'Notificación',
+            'mensaje': message.notification?.body ?? '',
+            'tipo': message.data['tipo'] ?? 'sistema',
+            'fecha': FieldValue.serverTimestamp(),
+            'leida': false,
+            'data': message.data,
+          });
 
       print('Notificación guardada en Firestore: $notificacionId');
     } catch (e) {
-      print('Error al guardar notificación en Firestore: $e');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'NotificationService._guardarNotificacionEnFirestore',
+      );
+      print('⚠️ Error al guardar notificación: ${appError.userMessage}');
+      if (appError.requiresAdminNotification) {
+        // Extraer userId del mensaje para el log
+        final uid = message.data['userId'] as String?;
+        await _errorLogger.logError(
+          appError,
+          userId: uid,
+          context: 'Guardar notificación en Firestore',
+        );
+      }
     }
   }
 
@@ -119,7 +153,11 @@ class NotificationService {
     try {
       return await _messaging.getToken();
     } catch (e) {
-      print('Error al obtener token: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'NotificationService.obtenerToken',
+      );
+      print('⚠️ Error al obtener token FCM: ${appError.userMessage}');
       return null;
     }
   }
@@ -133,7 +171,18 @@ class NotificationService {
       });
       print('Token guardado en Firestore para usuario: $userId');
     } catch (e) {
-      print('Error al guardar token en Firestore: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'NotificationService.guardarTokenEnFirestore',
+      );
+      print('⚠️ Error al guardar token: ${appError.userMessage}');
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          userId: userId,
+          context: 'Guardar FCM token en Firestore',
+        );
+      }
     }
   }
 
@@ -151,7 +200,14 @@ class NotificationService {
       await _messaging.deleteToken();
       print('Token FCM eliminado del dispositivo');
     } catch (e) {
-      print('Error al cerrar sesión de notificaciones: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'NotificationService.cerrarSesion',
+      );
+      print(
+        '⚠️ Error al cerrar sesión de notificaciones: ${appError.userMessage}',
+      );
+      // No registrar como crítico ya que el cierre de sesión puede continuar
     }
   }
 }

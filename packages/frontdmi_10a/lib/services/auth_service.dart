@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/usuario_model.dart';
+import '../utils/error_handler.dart';
+import 'error_logging_service.dart';
 
 // Servicio de autenticación con Firebase - JaimeCAST69
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ErrorLoggingService _errorLogger = ErrorLoggingService();
 
   // Obtener usuario actual
   User? get currentUser => _auth.currentUser;
@@ -33,7 +36,14 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      throw Exception('Error al iniciar sesión: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'AuthService.login',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(appError, context: 'Login falló');
+      }
+      throw appError;
     }
   }
 
@@ -71,7 +81,14 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      throw Exception('Error al registrar usuario: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'AuthService.registro',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(appError, context: 'Registro falló');
+      }
+      throw appError;
     }
   }
 
@@ -95,7 +112,14 @@ class AuthService {
       // Siempre cerrar sesión en Firebase Auth
       await _auth.signOut();
     } catch (e) {
-      throw Exception('Error al cerrar sesión: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'AuthService.logout',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(appError, context: 'Logout falló');
+      }
+      throw appError;
     }
   }
 
@@ -111,7 +135,18 @@ class AuthService {
       }
       return null;
     } catch (e) {
-      throw Exception('Error al obtener usuario: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'AuthService.obtenerUsuarioActual',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          userId: currentUser?.uid,
+          context: 'Obtener usuario actual',
+        );
+      }
+      throw appError;
     }
   }
 

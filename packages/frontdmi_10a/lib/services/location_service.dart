@@ -1,10 +1,13 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/ubicacion_model.dart';
+import '../utils/error_handler.dart';
+import 'error_logging_service.dart';
 
 // Servicio de geolocalización - BojitaNoir
 class LocationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ErrorLoggingService _errorLogger = ErrorLoggingService();
 
   // Verificar y solicitar permisos de ubicación
   Future<bool> checkPermissions() async {
@@ -47,7 +50,17 @@ class LocationService {
         timestamp: DateTime.now(),
       );
     } catch (e) {
-      throw Exception('Error al obtener ubicación: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'LocationService.getCurrentLocation',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          context: 'Obtener ubicación actual',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -78,7 +91,18 @@ class LocationService {
           .doc(repartidorId)
           .set(ubicacion.toJson());
     } catch (e) {
-      throw Exception('Error al actualizar ubicación: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'LocationService.updateRepartidorLocation',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          userId: repartidorId,
+          context: 'Actualizar ubicación repartidor',
+        );
+      }
+      throw appError;
     }
   }
 
@@ -95,7 +119,18 @@ class LocationService {
       }
       return null;
     } catch (e) {
-      throw Exception('Error al obtener ubicación: ${e.toString()}');
+      final appError = ErrorHandler.handleError(
+        e,
+        context: 'LocationService.getRepartidorLocation',
+      );
+      if (appError.requiresAdminNotification) {
+        await _errorLogger.logError(
+          appError,
+          userId: repartidorId,
+          context: 'Obtener ubicación repartidor',
+        );
+      }
+      throw appError;
     }
   }
 

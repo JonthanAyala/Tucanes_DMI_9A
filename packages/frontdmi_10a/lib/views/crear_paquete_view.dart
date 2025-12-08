@@ -10,6 +10,9 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import '../utils/validators.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_exception.dart';
+import '../utils/error_types.dart';
+import '../utils/constants.dart';
 
 // Vista de creación de paquete - Revamped
 class CrearPaqueteView extends StatefulWidget {
@@ -112,12 +115,20 @@ class _CrearPaqueteViewState extends State<CrearPaqueteView> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          throw Exception('Permisos de ubicación denegados');
+          throw AppException(
+            type: ErrorType.permissionDenied,
+            userMessage: AppConstants.msgPermisosDenegados,
+            technicalMessage: 'Permission denied for location',
+          );
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        throw Exception('Permisos de ubicación denegados permanentemente');
+        throw AppException(
+          type: ErrorType.permissionDeniedPermanently,
+          userMessage: AppConstants.msgPermisosDenegadosPermanente,
+          technicalMessage: 'Permission denied forever for location',
+        );
       }
 
       // Obtener ubicación
@@ -145,9 +156,13 @@ class _CrearPaqueteViewState extends State<CrearPaqueteView> {
       }
     } catch (e) {
       if (mounted) {
+        // Obtener mensaje amigable si es AppException
+        final mensaje = e is AppException
+            ? e.userMessage
+            : 'Error al obtener ubicación';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al obtener ubicación: ${e.toString()}'),
+            content: Text(mensaje),
             backgroundColor: AppTheme.errorColor,
           ),
         );
